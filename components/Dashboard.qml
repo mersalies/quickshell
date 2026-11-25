@@ -8,6 +8,7 @@ import Qt5Compat.GraphicalEffects
 
 PanelWindow {
     id: dashboard
+    screen: root.panelScreen ?? Quickshell.screens[0]
     visible: true
     exclusionMode: ExclusionMode.Ignore
     anchors { top: true; bottom: true; right: true }

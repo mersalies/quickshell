@@ -8,18 +8,26 @@ import Qt5Compat.GraphicalEffects
 
 PanelWindow {
     id: launcherPanel
+    screen: root.panelScreen ?? Quickshell.screens[0]
     visible: true
     exclusionMode: ExclusionMode.Ignore
     anchors { top: true; bottom: true; left: true }
     margins { top: 40; bottom: 10; left: root.launcherVisible ? 6 : -560 }
-    implicitWidth: root.activeTab === 3 ? 500 : 420
+    // окно всегда 500px, видимый фон плавно меняет ширину; ввод принимается только над фоном
+    implicitWidth: 500
+    mask: Region { item: panelBg }
     color: "transparent"
     focusable: true
     WlrLayershell.keyboardFocus: root.launcherVisible ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     Behavior on margins.left { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
 
     Rectangle {
-        anchors.fill: parent
+        id: panelBg
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        width: root.activeTab === 3 ? 500 : 420
+        Behavior on width { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
         color: Qt.rgba(root.walBackground.r, root.walBackground.g, root.walBackground.b, 0.7)
         radius: 20
 
@@ -179,17 +187,21 @@ PanelWindow {
                 ControlCenter {
                     id: controlCenter
                     anchors.fill: parent
-                    visible: root.activeTab === 3
                     opacity: root.activeTab === 3 ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                    visible: opacity > 0.01
+                    enabled: root.activeTab === 3
+                    Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+                    transform: Translate { y: (root.activeTab === 3) ? 0 : 14; Behavior on y { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } } }
                 }
 
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 15
-                    visible: root.activeTab === 0
                     opacity: root.activeTab === 0 ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                    visible: opacity > 0.01
+                    enabled: root.activeTab === 0
+                    Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+                    transform: Translate { y: (root.activeTab === 0) ? 0 : 14; Behavior on y { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } } }
 
                     Rectangle {
                         Layout.fillWidth: true
@@ -472,9 +484,11 @@ PanelWindow {
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 15
-                    visible: root.activeTab === 1 || root.activeTab === 2
                     opacity: root.activeTab === 1 || root.activeTab === 2 ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                    visible: opacity > 0.01
+                    enabled: root.activeTab === 1 || root.activeTab === 2
+                    Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
+                    transform: Translate { y: (root.activeTab === 1 || root.activeTab === 2) ? 0 : 14; Behavior on y { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } } }
 
                     // Мониторы: одни обои на все или разные на каждом
                     Rectangle {

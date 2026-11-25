@@ -7,6 +7,7 @@ import QtQuick.Controls
 
 PanelWindow {
     id: btPanel
+    screen: root.panelScreen ?? Quickshell.screens[0]
     visible: true
     exclusionMode: ExclusionMode.Ignore
     anchors { top: true; right: true }

@@ -459,11 +459,11 @@ PanelWindow {
                     onClicked: function(mouse) {
                         if (mouse.button === Qt.RightButton) {
                             root.activeTab = 1
-                            if (!root.launcherVisible) root.toggleLauncher()
+                            if (!root.launcherVisible) root.toggleLauncher(bar.screen)
                             else { root.activeTab = 1; if (!root.wallsLoaded) root.loadWallpapers() }
                         } else {
                             root.activeTab = 0
-                            root.toggleLauncher()
+                            root.toggleLauncher(bar.screen)
                         }
                     }
                 }
@@ -1072,9 +1072,9 @@ PanelWindow {
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                     onClicked: function(mouse) {
                         if (mouse.button === Qt.RightButton)
-                            root.toggleBluetooth()
+                            root.toggleBluetooth(bar.screen)
                         else
-                            root.toggleWifi()
+                            root.toggleWifi(bar.screen)
                     }
                 }
             }
@@ -1202,7 +1202,7 @@ PanelWindow {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.togglePowerProfiles()
+                    onClicked: root.togglePowerProfiles(bar.screen)
                 }
             }
 
@@ -1230,7 +1230,7 @@ PanelWindow {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: root.toggleDashboard()
+                    onClicked: root.toggleDashboard(bar.screen)
                 }
             }
         }

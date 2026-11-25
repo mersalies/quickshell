@@ -7,6 +7,7 @@ import QtQuick.Controls
 
 PanelWindow {
     id: powerPanel
+    screen: root.panelScreen ?? Quickshell.screens[0]
     visible: true
     exclusionMode: ExclusionMode.Ignore
     anchors { top: true; right: true }

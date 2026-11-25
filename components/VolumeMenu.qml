@@ -21,23 +21,28 @@ PopupWindow {
     anchor.edges: Edges.Top
     anchor.gravity: Edges.Bottom
     color: "transparent"
-    implicitWidth: 360
-    implicitHeight: body.implicitHeight + 24
-    visible: false
+    implicitWidth: 300
+    implicitHeight: body.implicitHeight + 20
+
+    // плавное появление: окно живёт, пока идёт анимация закрытия
+    property bool open: false
+    property real reveal: open ? 1 : 0
+    Behavior on reveal { NumberAnimation { duration: 190; easing.type: Easing.OutCubic } }
+    visible: reveal > 0.001
 
     // открытие по наведению с небольшой задержкой, закрытие — когда курсор ушёл и с кнопки, и с окна
     Timer {
         id: openTimer
         interval: 220
-        onTriggered: menu.visible = true
+        onTriggered: menu.open = true
     }
     Timer {
         id: closeTimer
         interval: 450
-        onTriggered: if (!menu.anchorHovered && !menu.hovered) menu.visible = false
+        onTriggered: if (!menu.anchorHovered && !menu.hovered) menu.open = false
     }
     onAnchorHoveredChanged: {
-        if (anchorHovered) { closeTimer.stop(); if (!visible) openTimer.restart() }
+        if (anchorHovered) { closeTimer.stop(); if (!open) openTimer.restart() }
         else { openTimer.stop(); closeTimer.restart() }
     }
     onHoveredChanged: if (hovered) closeTimer.stop(); else closeTimer.restart()
@@ -106,13 +111,13 @@ PopupWindow {
         property color tint: root.walForeground
         property bool active: false
         signal clicked()
-        width: 26; height: 26; radius: 8
+        width: 24; height: 24; radius: 7
         color: active ? Qt.rgba(tint.r, tint.g, tint.b, 0.2) : (ibMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent")
         Text {
             anchors.centerIn: parent
             text: ib.glyph
             color: ib.tint
-            font.pixelSize: 14
+            font.pixelSize: 13
             font.family: "JetBrainsMono Nerd Font"
         }
         MouseArea {
@@ -134,7 +139,12 @@ PopupWindow {
 
     Rectangle {
         anchors.fill: parent
-        radius: 16
+        radius: 14
+        opacity: menu.reveal
+        transform: [
+            Scale { origin.x: menu.width / 2; origin.y: 0; xScale: 0.94 + 0.06 * menu.reveal; yScale: 0.9 + 0.1 * menu.reveal },
+            Translate { y: (1 - menu.reveal) * -8 }
+        ]
         color: Qt.rgba(root.walBackground.r, root.walBackground.g, root.walBackground.b, 0.92)
         border.width: 1
         border.color: Qt.rgba(1, 1, 1, 0.08)
@@ -146,8 +156,8 @@ PopupWindow {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
-            anchors.margins: 12
-            spacing: 8
+            anchors.margins: 10
+            spacing: 6
 
             // ─── общая громкость ───
             RowLayout {
@@ -179,8 +189,8 @@ PopupWindow {
                     required property var modelData
                     readonly property bool cur: menu.sink === modelData
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 28
-                    radius: 8
+                    Layout.preferredHeight: 26
+                    radius: 7
                     color: cur ? Qt.rgba(root.walColor5.r, root.walColor5.g, root.walColor5.b, 0.15) : (sinkMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.05) : "transparent")
                     RowLayout {
                         anchors.fill: parent
@@ -220,16 +230,16 @@ PopupWindow {
                     id: pl
                     required property var modelData
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 52
-                    radius: 12
+                    Layout.preferredHeight: 44
+                    radius: 10
                     color: Qt.rgba(0, 0, 0, 0.25)
                     RowLayout {
                         anchors.fill: parent
-                        anchors.margins: 8
-                        spacing: 10
+                        anchors.margins: 7
+                        spacing: 8
                         Rectangle {
-                            Layout.preferredWidth: 36
-                            Layout.preferredHeight: 36
+                            Layout.preferredWidth: 30
+                            Layout.preferredHeight: 30
                             radius: 8
                             color: Qt.rgba(1, 1, 1, 0.06)
                             clip: true
@@ -300,21 +310,21 @@ PopupWindow {
                     required property var modelData
                     readonly property bool muted: !!(modelData.audio && modelData.audio.muted)
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 50
-                    radius: 12
+                    Layout.preferredHeight: 42
+                    radius: 10
                     color: Qt.rgba(0, 0, 0, 0.25)
                     RowLayout {
                         anchors.fill: parent
-                        anchors.margins: 8
-                        spacing: 10
+                        anchors.margins: 7
+                        spacing: 8
                         Item {
-                            Layout.preferredWidth: 26
-                            Layout.preferredHeight: 26
+                            Layout.preferredWidth: 22
+                            Layout.preferredHeight: 22
                             Image {
                                 id: appImg
                                 anchors.fill: parent
                                 source: menu.appIcon(st.modelData)
-                                sourceSize: Qt.size(26, 26)
+                                sourceSize: Qt.size(22, 22)
                                 visible: status === Image.Ready
                                 opacity: st.muted ? 0.4 : 1
                             }
@@ -364,7 +374,7 @@ PopupWindow {
             Text {
                 Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
-                text: "ЛКМ — mute · ПКМ — pavucontrol · колесо — громкость"
+                text: "ЛКМ mute · ПКМ микшер · колесо громкость"
                 color: root.walColor8
                 font.pixelSize: 8
                 font.family: menu.ff

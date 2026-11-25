@@ -888,7 +888,7 @@ Item {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: if (!root.btVisible) root.toggleBluetooth()
+                                onClicked: if (!root.btVisible) root.toggleBluetooth(root.panelScreen)
                             }
                         }
                         Text {

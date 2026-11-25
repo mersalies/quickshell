@@ -1,6 +1,7 @@
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Quickshell.Hyprland
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
@@ -22,6 +23,22 @@ ShellRoot {
     property bool dashboardVisible: false
     property bool musicVisible: false
     property var musicScreen: null
+    // Монитор, на котором открываются боковые панели (лаунчер, Wi-Fi, BT, питание, дашборд)
+    property var panelScreen: null
+    function screenFor(scr) {
+        if (scr) return scr
+        var fm = Hyprland.focusedMonitor
+        var list = Quickshell.screens
+        for (var i = 0; i < list.length; i++) if (fm && list[i].name === fm.name) return list[i]
+        return list.length ? list[0] : null
+    }
+    // Общая логика: открыта на другом мониторе — переносим туда, иначе переключаем
+    function panelToggle(isOpen, scr) {
+        var s = screenFor(scr)
+        if (isOpen && panelScreen !== s) { panelScreen = s; return true }
+        if (!isOpen) panelScreen = s
+        return !isOpen
+    }
     property bool launcherVisible: false
     property bool wifiVisible: false
     property bool btVisible: false
@@ -270,10 +287,10 @@ ShellRoot {
 
 
 
-    function toggleLauncher() { launcherVisible = !launcherVisible }
+    function toggleLauncher(scr) { launcherVisible = panelToggle(launcherVisible, scr) }
 
-    function toggleDashboard() {
-        dashboardVisible = !dashboardVisible
+    function toggleDashboard(scr) {
+        dashboardVisible = panelToggle(dashboardVisible, scr)
         if (dashboardVisible) { wifiVisible = false; btVisible = false; powerVisible = false }
     }
 
@@ -285,8 +302,8 @@ ShellRoot {
     }
 
 
-    function togglePowerProfiles() {
-        powerVisible = !powerVisible
+    function togglePowerProfiles(scr) {
+        powerVisible = panelToggle(powerVisible, scr)
         if (powerVisible) { wifiVisible = false; btVisible = false; dashboardVisible = false }
     }
 
@@ -297,13 +314,13 @@ ShellRoot {
     }
 
 
-    function toggleWifi() {
-        wifiVisible = !wifiVisible
+    function toggleWifi(scr) {
+        wifiVisible = panelToggle(wifiVisible, scr)
         if (wifiVisible) { btVisible = false; dashboardVisible = false; powerVisible = false; refreshWifi() }
     }
 
-    function toggleBluetooth() {
-        btVisible = !btVisible
+    function toggleBluetooth(scr) {
+        btVisible = panelToggle(btVisible, scr)
         if (btVisible) { wifiVisible = false; dashboardVisible = false; powerVisible = false; refreshBluetooth() }
     }
 
@@ -1139,6 +1156,7 @@ ShellRoot {
         function toggle() {
             if (root.launcherVisible && root.activeTab === 3) { root.launcherVisible = false; return }
             root.activeTab = 3
+            root.panelScreen = root.screenFor(null)
             root.launcherVisible = true
         }
     }
