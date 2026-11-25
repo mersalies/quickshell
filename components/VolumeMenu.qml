@@ -3,6 +3,7 @@ import Quickshell.Services.Pipewire
 import Quickshell.Services.Mpris
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 
 // Выпадающий микшер под индикатором громкости: общая громкость, устройство
 // вывода, MPRIS-плееры (пауза/переключение) и приложения, играющие звук (мьют/громкость).
@@ -21,7 +22,7 @@ PopupWindow {
     anchor.edges: Edges.Top
     anchor.gravity: Edges.Bottom
     color: "transparent"
-    implicitWidth: 300
+    implicitWidth: 340
     implicitHeight: body.implicitHeight + 20
 
     // плавное появление: окно живёт, пока идёт анимация закрытия
@@ -73,6 +74,7 @@ PopupWindow {
     component VolSlider: Item {
         id: vs
         property var node: null
+        property bool wheelVolume: true
         readonly property real v: node && node.audio ? Math.min(1, node.audio.volume) : 0
         readonly property bool muted: !!(node && node.audio && node.audio.muted)
         implicitHeight: 18
@@ -99,6 +101,7 @@ PopupWindow {
             onPressed: function(m) { setAt(m.x) }
             onPositionChanged: function(m) { if (pressed) setAt(m.x) }
             onWheel: function(w) {
+                if (!vs.wheelVolume) { w.accepted = false; return }
                 if (vs.node && vs.node.audio)
                     vs.node.audio.volume = Math.max(0, Math.min(1, vs.node.audio.volume + (w.angleDelta.y > 0 ? 0.05 : -0.05)))
             }
@@ -224,13 +227,23 @@ PopupWindow {
 
             // ─── плееры ───
             SubTitle { text: "ПЛЕЕРЫ"; visible: menu.players.length > 0 }
-            Repeater {
+            // больше 3 — список прокручивается
+            ListView {
+                id: playersList
+                Layout.fillWidth: true
+                Layout.preferredHeight: count ? Math.min(count, 3) * (44 + spacing) - spacing + (count > 3 ? 44 / 2 : 0) : 0
+                visible: count > 0
                 model: menu.players
+                spacing: 6
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                interactive: count > 3
+                ScrollBar.vertical: ScrollBar { policy: playersList.count > 3 ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff; width: 4 }
                 delegate: Rectangle {
                     id: pl
                     required property var modelData
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 44
+                    width: ListView.view.width - (ListView.view.count > 3 ? 8 : 0)
+                    height: 44
                     radius: 10
                     color: Qt.rgba(0, 0, 0, 0.25)
                     RowLayout {
@@ -303,14 +316,24 @@ PopupWindow {
 
             // ─── приложения ───
             SubTitle { text: "ПРИЛОЖЕНИЯ"; visible: menu.streams.length > 0 }
-            Repeater {
+            // больше 4 — список прокручивается
+            ListView {
+                id: streamsList
+                Layout.fillWidth: true
+                Layout.preferredHeight: count ? Math.min(count, 4) * (42 + spacing) - spacing + (count > 4 ? 42 / 2 : 0) : 0
+                visible: count > 0
                 model: menu.streams
+                spacing: 6
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                interactive: count > 4
+                ScrollBar.vertical: ScrollBar { policy: streamsList.count > 4 ? ScrollBar.AlwaysOn : ScrollBar.AlwaysOff; width: 4 }
                 delegate: Rectangle {
                     id: st
                     required property var modelData
+                    width: ListView.view.width - (ListView.view.count > 4 ? 8 : 0)
+                    height: 42
                     readonly property bool muted: !!(modelData.audio && modelData.audio.muted)
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 42
                     radius: 10
                     color: Qt.rgba(0, 0, 0, 0.25)
                     RowLayout {
@@ -348,7 +371,7 @@ PopupWindow {
                                 font.family: menu.ff
                                 elide: Text.ElideRight
                             }
-                            VolSlider { Layout.fillWidth: true; node: st.modelData }
+                            VolSlider { Layout.fillWidth: true; node: st.modelData; wheelVolume: !streamsList.interactive }
                         }
                         IconBtn {
                             glyph: st.muted ? "\u{F075F}" : "\u{F057E}"
