@@ -1,0 +1,10 @@
+# личное состояние — создаётся само при работе
+state/
+app_usage.json
+
+# бэкапы и служебное
+*.bak*
+*.save
+*.tmp
+graphify-out/
+__pycache__/
