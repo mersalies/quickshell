@@ -31,6 +31,14 @@ PanelWindow {
         color: Qt.rgba(root.walBackground.r, root.walBackground.g, root.walBackground.b, 0.7)
         radius: 20
 
+        // Колесо над любой частью панели (поля, вкладки) прокручивает пульт
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.NoButton
+            enabled: root.activeTab === 3
+            onWheel: function(w) { controlCenter.scrollBy(-w.angleDelta.y / 120 * 80) }
+        }
+
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 20

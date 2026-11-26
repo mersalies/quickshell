@@ -40,6 +40,17 @@ Item {
         }
     }
 
+    // Плавная прокрутка пульта колесом — вызывается и с полей панели вокруг него
+    property real scrollTarget: 0
+    function scrollBy(dy) {
+        var base = flickAnim.running ? scrollTarget : flick.contentY
+        scrollTarget = Math.max(0, Math.min(flick.contentHeight - flick.height, base + dy))
+        flickAnim.stop()
+        flickAnim.from = flick.contentY
+        flickAnim.to = scrollTarget
+        flickAnim.start()
+    }
+
     Keys.onPressed: function(event) {
         if (event.key === Qt.Key_Escape) {
             root.launcherVisible = false
@@ -598,6 +609,14 @@ Item {
         interactive: !layoutArea.dragging
         ScrollBar.vertical: ScrollBar { width: 4; policy: ScrollBar.AsNeeded }
 
+        NumberAnimation {
+            id: flickAnim
+            target: flick
+            property: "contentY"
+            duration: 260
+            easing.type: Easing.OutCubic
+        }
+
         ColumnLayout {
             id: col
             width: flick.width - 2
@@ -995,11 +1014,11 @@ Item {
                         onDraggingChanged: recompute()
                         Connections { target: cc; function onMonsChanged() { layoutArea.recompute() } }
 
-                        // колесо над схемой не прокручивает панель
+                        // во время перетаскивания колесо не прокручивает панель
                         MouseArea {
                             anchors.fill: parent
                             acceptedButtons: Qt.NoButton
-                            onWheel: function(w) { w.accepted = true }
+                            onWheel: function(w) { if (!layoutArea.dragging) cc.scrollBy(-w.angleDelta.y / 120 * 80) }
                         }
 
                         Text {
