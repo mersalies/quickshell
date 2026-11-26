@@ -3,6 +3,23 @@
 Оболочка рабочего стола для **Hyprland** на [Quickshell](https://quickshell.org): бар, лаунчер, обои, пульт управления, музыка, Wi-Fi/Bluetooth.
 Цвета берутся из обоев через pywal.
 
+## Скриншоты
+
+![Бар](docs/screenshots/bar.png)
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/control-center.png" width="260"><br><sub>Пульт: переключатели, раздача интернета, устройства, мониторы</sub></td>
+    <td align="center"><img src="docs/screenshots/control-center-cursors.png" width="260"><br><sub>Пульт: курсоры</sub></td>
+    <td align="center"><img src="docs/screenshots/volume-mixer.png" width="260"><br><sub>Микшер под индикатором громкости</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/apps.png" width="220"><br><sub>Приложения</sub></td>
+    <td align="center"><img src="docs/screenshots/wallpapers.png" width="220"><br><sub>Обои: разные на каждый монитор</sub></td>
+    <td></td>
+  </tr>
+</table>
+
 ## Что внутри
 
 - **Бар**: рабочие столы, раскладка клавиатуры, часы с таймером, секундомером, будильником и календарём, сейчас играет + визуализатор cava, CPU/GPU/RAM/VRAM, батарея, Wi-Fi, Bluetooth.
