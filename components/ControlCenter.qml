@@ -672,6 +672,287 @@ Item {
                 }
             }
 
+            // ─── Раздача интернета ───
+            Rectangle {
+                id: hsCard
+                Layout.fillWidth: true
+                Layout.preferredHeight: hsCol.implicitHeight + 24
+                color: Qt.rgba(0, 0, 0, 0.3)
+                radius: 16
+                Behavior on Layout.preferredHeight { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+                readonly property bool dirty: hotspot.loaded && (hsName.text !== hotspot.ssid || hsPass.text !== hotspot.password)
+                readonly property bool valid: hsName.text.length > 0 && hsName.text.length <= 32 && hsPass.text.length >= 8 && hsPass.text.length <= 63
+
+                Connections {
+                    target: hotspot
+                    function onSsidChanged() { if (!hsName.activeFocus) hsName.text = hotspot.ssid }
+                    function onPasswordChanged() { if (!hsPass.activeFocus) hsPass.text = hotspot.password }
+                }
+                Component.onCompleted: { hsName.text = hotspot.ssid; hsPass.text = hotspot.password }
+                Binding { target: hotspot; property: "watch"; value: cc.shown && hotspot.active }
+
+                function apply() {
+                    if (!valid || !dirty || hotspot.busy) return
+                    hotspot.start(hsName.text, hsPass.text)
+                }
+
+                ColumnLayout {
+                    id: hsCol
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    anchors.margins: 12
+                    spacing: 10
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+                        Rectangle {
+                            width: 34; height: 34; radius: 17
+                            color: hotspot.active ? root.walColor5 : Qt.rgba(1, 1, 1, 0.08)
+                            Behavior on color { ColorAnimation { duration: 150 } }
+                            Text {
+                                anchors.centerIn: parent
+                                text: "\u{F0003}"
+                                color: hotspot.active ? root.walBackground : root.walForeground
+                                font.pixelSize: 18
+                                font.family: cc.ff
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 1
+                            Text {
+                                text: "Раздача интернета"
+                                color: root.walForeground
+                                font.pixelSize: 12
+                                font.bold: true
+                                font.family: cc.ff
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: hotspot.busy ? "Подождите…"
+                                    : hotspot.error !== "" ? hotspot.error
+                                    : hotspot.active ? hotspot.ssid + " · " + hotspot.clients.filter(function(c) { return !c.blocked }).length + " устр."
+                                    : "Выкл."
+                                color: hotspot.error !== "" && !hotspot.busy ? root.walColor1 : root.walColor8
+                                font.pixelSize: 10
+                                font.family: cc.ff
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                        Rectangle {
+                            width: 44; height: 24; radius: 12
+                            opacity: hotspot.busy ? 0.5 : 1
+                            color: hotspot.active ? root.walColor5 : Qt.rgba(0.3, 0.3, 0.3, 0.5)
+                            Behavior on color { ColorAnimation { duration: 200 } }
+                            Rectangle {
+                                width: 20; height: 20; radius: 10; y: 2
+                                x: hotspot.active ? 22 : 2
+                                color: root.walBackground
+                                Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: hotspot.toggle()
+                            }
+                        }
+                    }
+
+                    // Имя и пароль — видны, когда раздача включена
+                    GridLayout {
+                        Layout.fillWidth: true
+                        visible: hotspot.active
+                        columns: 2
+                        columnSpacing: 8
+                        rowSpacing: 6
+
+                        Text { text: "Имя"; color: root.walColor8; font.pixelSize: 10; font.family: cc.ff }
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 30
+                            radius: 8
+                            color: Qt.rgba(1, 1, 1, 0.06)
+                            border.width: hsName.activeFocus ? 1 : 0
+                            border.color: cc.a(root.walColor5, 0.6)
+                            TextInput {
+                                id: hsName
+                                anchors.fill: parent
+                                anchors.leftMargin: 10
+                                anchors.rightMargin: 10
+                                verticalAlignment: TextInput.AlignVCenter
+                                color: root.walForeground
+                                font.pixelSize: 12
+                                font.family: cc.ff
+                                maximumLength: 32
+                                clip: true
+                                selectByMouse: true
+                                Keys.onReturnPressed: hsCard.apply()
+                            }
+                        }
+
+                        Text { text: "Пароль"; color: root.walColor8; font.pixelSize: 10; font.family: cc.ff }
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 30
+                            radius: 8
+                            color: Qt.rgba(1, 1, 1, 0.06)
+                            border.width: hsPass.activeFocus ? 1 : (hsPass.text.length > 0 && hsPass.text.length < 8 ? 1 : 0)
+                            border.color: hsPass.text.length > 0 && hsPass.text.length < 8 ? cc.a(root.walColor1, 0.7) : cc.a(root.walColor5, 0.6)
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 10
+                                anchors.rightMargin: 4
+                                spacing: 4
+                                TextInput {
+                                    id: hsPass
+                                    property bool reveal: false
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    verticalAlignment: TextInput.AlignVCenter
+                                    color: root.walForeground
+                                    font.pixelSize: 12
+                                    font.family: cc.ff
+                                    echoMode: reveal ? TextInput.Normal : TextInput.Password
+                                    maximumLength: 63
+                                    clip: true
+                                    selectByMouse: true
+                                    Keys.onReturnPressed: hsCard.apply()
+                                }
+                                Rectangle {
+                                    width: 24; height: 24; radius: 6
+                                    color: eyeMa.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: hsPass.reveal ? "\u{F0209}" : "\u{F0208}"
+                                        color: root.walColor8
+                                        font.pixelSize: 13
+                                        font.family: cc.ff
+                                    }
+                                    MouseArea {
+                                        id: eyeMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: hsPass.reveal = !hsPass.reveal
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        visible: hotspot.active && hsCard.dirty
+                        spacing: 8
+                        Text {
+                            Layout.fillWidth: true
+                            text: hsCard.valid ? "Раздача перезапустится, устройства переподключатся" : "Имя 1–32 символа, пароль 8–63"
+                            color: hsCard.valid ? root.walColor8 : root.walColor1
+                            font.pixelSize: 9
+                            font.family: cc.ff
+                            wrapMode: Text.Wrap
+                        }
+                        Chip {
+                            label: "Отмена"
+                            onClicked: { hsName.text = hotspot.ssid; hsPass.text = hotspot.password }
+                        }
+                        Chip {
+                            label: "Применить"
+                            on: hsCard.valid
+                            opacity: hsCard.valid ? 1 : 0.5
+                            onClicked: hsCard.apply()
+                        }
+                    }
+
+                    // Подключённые устройства
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        visible: hotspot.active
+                        spacing: 4
+
+                        Text {
+                            text: "Подключены"
+                            color: root.walColor8
+                            font.pixelSize: 10
+                            font.family: cc.ff
+                        }
+                        Text {
+                            visible: hotspot.clients.length === 0
+                            text: "Пока никого"
+                            color: root.walColor8
+                            opacity: 0.7
+                            font.pixelSize: 11
+                            font.family: cc.ff
+                        }
+                        Repeater {
+                            model: hotspot.clients
+                            delegate: Rectangle {
+                                id: clRow
+                                required property var modelData
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 42
+                                radius: 10
+                                color: Qt.rgba(1, 1, 1, 0.04)
+                                opacity: modelData.blocked ? 0.6 : 1
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 10
+                                    anchors.rightMargin: 6
+                                    spacing: 10
+                                    Text {
+                                        text: clRow.modelData.blocked ? "\u{F0028}" : "\u{F011C}"
+                                        color: clRow.modelData.blocked ? root.walColor1 : root.walColor5
+                                        font.pixelSize: 16
+                                        font.family: cc.ff
+                                    }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 1
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: clRow.modelData.name || "Устройство"
+                                            color: root.walForeground
+                                            font.pixelSize: 12
+                                            font.family: cc.ff
+                                            elide: Text.ElideRight
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: (clRow.modelData.blocked ? "заблокировано · " : "") + (clRow.modelData.ip || "IP ещё нет") + " · " + clRow.modelData.mac
+                                            color: root.walColor8
+                                            font.pixelSize: 9
+                                            font.family: cc.ff
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+                                    Rectangle {
+                                        width: 28; height: 28; radius: 8
+                                        color: kickMa.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: clRow.modelData.blocked ? "\u{F0FC6}" : "\u{F0156}"
+                                            color: clRow.modelData.blocked ? root.walColor2 : root.walColor1
+                                            font.pixelSize: 13
+                                            font.family: cc.ff
+                                        }
+                                        MouseArea {
+                                            id: kickMa
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: clRow.modelData.blocked ? hotspot.unblock(clRow.modelData.mac) : hotspot.kick(clRow.modelData.mac)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // ─── Устройства ───
             SectionTitle {
                 glyph: "\u{F00AF}"

@@ -12,12 +12,23 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     anchors { top: true; right: true }
     margins { top: 40; right: root.wifiVisible ? 6 : -350 }
-    implicitHeight: 420
+    implicitHeight: 620
     implicitWidth: 320
     color: "transparent"
     focusable: true
     WlrLayershell.keyboardFocus: root.wifiVisible ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
     Behavior on margins.right { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+
+    // Сети в зоне доступа: сохранённые (пароль уже есть) и остальные
+    readonly property var savedNets: root.wifiNetworks.filter(function(n) { return root.wifiSavedUuid(n.ssid) !== "" })
+    readonly property var otherNets: root.wifiNetworks.filter(function(n) { return root.wifiSavedUuid(n.ssid) === "" })
+
+    function connectTo(net) {
+        if (root.wifiConnecting) return
+        root.connectWifi(net.ssid, net.security, false)
+        if (root.wifiEnterpriseSSID === net.ssid) wifiUserInput.forceActiveFocus()
+        else if (root.wifiPasswordSSID === net.ssid) wifiPassInput.forceActiveFocus()
+    }
 
     function submitWifiConnect() {
         if (wifiPassInput.text.length === 0) return
@@ -30,6 +41,8 @@ PanelWindow {
         wifiConnectProc.password = wifiPassInput.text
         wifiConnectProc.username = wifiUserInput.text
         wifiConnectProc.enterprise = root.wifiEnterpriseSSID !== ""
+        // сохранённый профиль, чей пароль не подошёл, — обновить пароль в нём
+        wifiConnectProc.uuid = wifiConnectProc.enterprise ? "" : root.wifiSavedUuid(wifiConnectProc.ssid)
         wifiConnectProc.running = true
         wifiPassInput.text = ""
         wifiUserInput.text = ""
@@ -174,6 +187,60 @@ PanelWindow {
                     }
                 }
 
+                // Раздача интернета: только вкл/выкл (настройки — в «Пульте»)
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 40
+                    radius: 12
+                    color: hotspotMa.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.3)
+                    Behavior on color { ColorAnimation { duration: 120 } }
+                    visible: root.wifiEnabled
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 10
+                        spacing: 10
+                        Text {
+                            text: "\u{F0003}"
+                            color: hotspot.active ? root.walColor5 : root.walColor8
+                            font.pixelSize: 16
+                            font.family: "JetBrainsMono Nerd Font"
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: hotspot.busy ? "Раздача…" : hotspot.active ? "Раздача · " + hotspot.clients.length + " устр." : "Раздача интернета"
+                            color: root.walForeground
+                            font.pixelSize: 12
+                            font.family: "JetBrainsMono Nerd Font"
+                            elide: Text.ElideRight
+                        }
+                        Rectangle {
+                            width: 36
+                            height: 20
+                            radius: 10
+                            opacity: hotspot.busy ? 0.5 : 1
+                            color: hotspot.active ? root.walColor5 : Qt.rgba(0.3, 0.3, 0.3, 0.5)
+                            Behavior on color { ColorAnimation { duration: 200 } }
+                            Rectangle {
+                                width: 16
+                                height: 16
+                                radius: 8
+                                y: 2
+                                x: hotspot.active ? 18 : 2
+                                color: root.walBackground
+                                Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                            }
+                        }
+                    }
+                    MouseArea {
+                        id: hotspotMa
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: hotspot.toggle()
+                    }
+                }
+
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: root.wifiEnterpriseSSID !== "" ? 72 : 36
@@ -275,6 +342,105 @@ PanelWindow {
                     }
                 }
 
+                // Сохранённые сети рядом — подключение в один клик, без пароля
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: root.wifiEnabled && wifiPanel.savedNets.length > 0
+                    spacing: 6
+                    Text {
+                        text: "Сохранённые"
+                        color: root.walColor8
+                        font.pixelSize: 11
+                        font.family: "JetBrainsMono Nerd Font"
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: savedCol.implicitHeight + 12
+                        color: Qt.rgba(0, 0, 0, 0.3)
+                        radius: 12
+                        Column {
+                            id: savedCol
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.margins: 6
+                            spacing: 4
+                            Repeater {
+                                model: wifiPanel.savedNets
+                                delegate: Rectangle {
+                                    id: savedRow
+                                    required property var modelData
+                                    readonly property bool connecting: root.wifiConnecting && wifiConnectProc.ssid === modelData.ssid
+                                    width: savedCol.width
+                                    height: 44
+                                    radius: 10
+                                    color: savedMa.containsMouse ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                                    Behavior on color { ColorAnimation { duration: 120 } }
+                                    MouseArea {
+                                        id: savedMa
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: wifiPanel.connectTo(savedRow.modelData)
+                                    }
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.leftMargin: 10
+                                        anchors.rightMargin: 6
+                                        spacing: 10
+                                        Text {
+                                            text: savedRow.modelData.signal > 66 ? "󰤨" : savedRow.modelData.signal > 33 ? "󰤥" : "󰤟"
+                                            color: root.walColor2
+                                            font.pixelSize: 16
+                                            font.family: "JetBrainsMono Nerd Font"
+                                        }
+                                        ColumnLayout {
+                                            Layout.fillWidth: true
+                                            spacing: 1
+                                            Text {
+                                                text: savedRow.modelData.ssid
+                                                color: root.walForeground
+                                                font.pixelSize: 12
+                                                font.family: "JetBrainsMono Nerd Font"
+                                                elide: Text.ElideRight
+                                                Layout.fillWidth: true
+                                            }
+                                            Text {
+                                                text: savedRow.connecting ? "Подключение…" : "Сохранена · " + savedRow.modelData.signal + "%"
+                                                color: root.walColor8
+                                                font.pixelSize: 9
+                                                font.family: "JetBrainsMono Nerd Font"
+                                            }
+                                        }
+                                        // «Забыть» — видно при наведении
+                                        Rectangle {
+                                            width: 26
+                                            height: 26
+                                            radius: 8
+                                            visible: savedMa.containsMouse || forgetMa.containsMouse
+                                            color: forgetMa.containsMouse ? Qt.rgba(1, 1, 1, 0.1) : "transparent"
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: "\u{F0A7A}"
+                                                color: root.walColor1
+                                                font.pixelSize: 13
+                                                font.family: "JetBrainsMono Nerd Font"
+                                            }
+                                            MouseArea {
+                                                id: forgetMa
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.forgetWifi(root.wifiSavedUuid(savedRow.modelData.ssid))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 RowLayout {
                     Layout.fillWidth: true
                     visible: root.wifiEnabled
@@ -320,7 +486,7 @@ PanelWindow {
                         anchors.margins: 6
                         spacing: 4
                         boundsBehavior: Flickable.StopAtBounds
-                        model: root.wifiNetworks
+                        model: wifiPanel.otherNets
                         delegate: Rectangle {
                             width: parent ? parent.width : 0
                             height: 44
@@ -362,34 +528,15 @@ PanelWindow {
                                 anchors.fill: parent
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (root.isEnterpriseWifi(modelData.security)) {
-                                        root.wifiEnterpriseSSID = modelData.ssid
-                                        root.wifiEnterpriseSecurity = modelData.security
-                                        root.wifiPasswordSSID = ""
-                                        wifiUserInput.forceActiveFocus()
-                                    } else if (modelData.security !== "" && modelData.security !== "--") {
-                                        root.wifiPasswordSSID = modelData.ssid
-                                        root.wifiEnterpriseSSID = ""
-                                        root.wifiEnterpriseSecurity = ""
-                                        wifiPassInput.forceActiveFocus()
-                                    } else {
-                                        root.wifiConnecting = true
-                                        wifiConnectProc.ssid = modelData.ssid
-                                        wifiConnectProc.password = ""
-                                        wifiConnectProc.username = ""
-                                        wifiConnectProc.enterprise = false
-                                        wifiConnectProc.running = true
-                                    }
-                                }
+                                onClicked: wifiPanel.connectTo(modelData)
                             }
                         }
                         ScrollBar.vertical: ScrollBar { active: true; width: 4 }
                     }
                     Text {
                         anchors.centerIn: parent
-                        visible: root.wifiNetworks.length === 0 && !root.wifiScanning
-                        text: root.wifiEnabled ? "No networks found" : "Wi-Fi is off"
+                        visible: wifiPanel.otherNets.length === 0 && !root.wifiScanning
+                        text: !root.wifiEnabled ? "Wi-Fi is off" : root.wifiNetworks.length > 0 ? "Других сетей нет" : "No networks found"
                         color: root.walColor8
                         font.pixelSize: 12
                         font.family: "JetBrainsMono Nerd Font"
@@ -426,6 +573,7 @@ PanelWindow {
         function onWifiPasswordSSIDChanged() {
             if (root.wifiPasswordSSID !== "") {
                 wifiPassInput.text = ""
+                wifiPassInput.forceActiveFocus()
             }
         }
     }

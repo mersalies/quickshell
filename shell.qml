@@ -159,6 +159,7 @@ ShellRoot {
     property string wifiLastSSID: ""
     property bool wifiMonitorReady: false
     property bool wifiConnecting: false
+    property var wifiSaved: []             // сохранённые в NetworkManager сети: [{ uuid, ssid }]
 
     property bool btEnabled: true
     property var btPairedDevices: []
@@ -378,6 +379,57 @@ ShellRoot {
         if (!wifiStatusProc.running) wifiStatusProc.running = true
         if (!wifiCurrentProc.running) wifiCurrentProc.running = true
         if (!wifiScanProc.running) wifiScanProc.running = true
+        refreshWifiSaved()
+    }
+
+    function refreshWifiSaved() {
+        if (!wifiSavedProc.running) {
+            wifiSavedProc.buf = []
+            wifiSavedProc.running = true
+        }
+    }
+
+    function wifiSavedUuid(ssid) {
+        for (var i = 0; i < root.wifiSaved.length; i++)
+            if (root.wifiSaved[i].ssid === ssid) return root.wifiSaved[i].uuid
+        return ""
+    }
+
+    // Подключение к сети из списка: сохранённая — сразу, иначе спросить пароль/логин
+    function connectWifi(ssid, security, forcePrompt) {
+        var uuid = wifiSavedUuid(ssid)
+        if (uuid !== "" && !forcePrompt) {
+            root.wifiConnecting = true
+            wifiConnectProc.ssid = ssid
+            wifiConnectProc.uuid = uuid
+            wifiConnectProc.security = security
+            wifiConnectProc.password = ""
+            wifiConnectProc.username = ""
+            wifiConnectProc.enterprise = false
+            wifiConnectProc.running = true
+        } else if (isEnterpriseWifi(security)) {
+            root.wifiEnterpriseSSID = ssid
+            root.wifiEnterpriseSecurity = security
+            root.wifiPasswordSSID = ""
+        } else if (security !== "" && security !== "--") {
+            root.wifiPasswordSSID = ssid
+            root.wifiEnterpriseSSID = ""
+            root.wifiEnterpriseSecurity = ""
+        } else {
+            root.wifiConnecting = true
+            wifiConnectProc.ssid = ssid
+            wifiConnectProc.uuid = ""
+            wifiConnectProc.security = security
+            wifiConnectProc.password = ""
+            wifiConnectProc.username = ""
+            wifiConnectProc.enterprise = false
+            wifiConnectProc.running = true
+        }
+    }
+
+    function forgetWifi(uuid) {
+        wifiForgetProc.command = ["nmcli", "connection", "delete", "uuid", uuid]
+        wifiForgetProc.running = true
     }
 
     function isEnterpriseWifi(security) {
@@ -844,13 +896,39 @@ ShellRoot {
     }
 
     Process {
+        id: wifiSavedProc
+        property var buf: []
+        command: ["bash", "-c", "export LANG=C LC_ALL=C; nmcli -t -f UUID,TYPE connection show 2>/dev/null | awk -F: '$2==\"802-11-wireless\" {print $1}' | while read -r u; do s=$(nmcli -g 802-11-wireless.ssid,802-11-wireless.mode connection show uuid \"$u\" 2>/dev/null | paste -sd'\\t'); printf '%s\\t%s\\n' \"$u\" \"$s\"; done"]
+        stdout: SplitParser {
+            onRead: data => {
+                var p = data.split("\t")
+                // точки доступа (в т.ч. своя раздача) — не сети для подключения
+                if (p.length >= 2 && p[1] !== "" && p[2] !== "ap")
+                    wifiSavedProc.buf.push({ uuid: p[0], ssid: p[1].replace(/\\:/g, ":") })
+            }
+        }
+        onExited: root.wifiSaved = wifiSavedProc.buf
+    }
+
+    Process {
+        id: wifiForgetProc
+        onExited: root.refreshWifiSaved()
+    }
+
+    Process {
         id: wifiConnectProc
         property string ssid: ""
+        property string uuid: ""              // сохранённый профиль NetworkManager
+        property string security: ""
         property string password: ""
         property string username: ""
         property bool enterprise: false
         property string lastOutput: ""
         command: {
+            if (uuid !== "" && password === "")
+                return ["bash", "-c", "LANG=C LC_ALL=C nmcli connection up uuid \"$1\" 2>&1", "_", uuid]
+            if (uuid !== "" && !enterprise)
+                return ["bash", "-c", "export LANG=C LC_ALL=C; nmcli connection modify uuid \"$1\" wifi-sec.psk \"$2\" 2>&1 && nmcli connection up uuid \"$1\" 2>&1", "_", uuid, password]
             var safeSsid = ssid.replace(/'/g, "'\\''")
             var safePass = password.replace(/'/g, "'\\''")
             var safeUser = username.replace(/'/g, "'\\''")
@@ -882,6 +960,9 @@ ShellRoot {
             var targetSsid = wifiConnectProc.ssid
             var wasEnterprise = wifiConnectProc.enterprise
             var hadPassword = wifiConnectProc.password !== ""
+            var savedOnly = wifiConnectProc.uuid !== "" && !hadPassword
+            var security = wifiConnectProc.security
+            wifiConnectProc.uuid = ""
             root.wifiConnecting = false
             root.wifiPasswordSSID = ""
             root.wifiEnterpriseSSID = ""
@@ -893,12 +974,16 @@ ShellRoot {
                 else if (err.indexOf("Ошибка") !== -1)
                     err = err.split("Ошибка").pop().trim()
                 root.notifyWifiError(targetSsid, err)
-                if (wasEnterprise)
+                if (savedOnly) {
+                    // сохранённый пароль не подошёл — спросить новый
+                    if (security !== "" && security !== "--") root.connectWifi(targetSsid, security, true)
+                } else if (wasEnterprise)
                     root.wifiEnterpriseSSID = targetSsid
                 else if (hadPassword)
                     root.wifiPasswordSSID = targetSsid
             }
             wifiConnectProc.lastOutput = ""
+            root.refreshWifiSaved()
             if (!wifiCurrentProc.running) wifiCurrentProc.running = true
             if (!wifiScanProc.running) wifiScanProc.running = true
         }
@@ -1097,6 +1182,7 @@ ShellRoot {
 
     Dashboard {}
     MusicPanel {}
+    HotspotService { id: hotspot }
     WifiPanel {}
     BluetoothPanel {}
     LauncherPanel {}
