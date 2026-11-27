@@ -462,7 +462,7 @@ PanelWindow {
                             if (!root.launcherVisible) root.toggleLauncher(bar.screen)
                             else { root.activeTab = 1; if (!root.wallsLoaded) root.loadWallpapers() }
                         } else {
-                            root.activeTab = 0
+                            root.activeTab = 3
                             root.toggleLauncher(bar.screen)
                         }
                     }

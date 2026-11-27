@@ -119,72 +119,6 @@ PanelWindow {
                             }
                         }
                     }
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        radius: 8
-                        color: root.activeTab === 2 ? Qt.rgba(root.walColor4.r, root.walColor4.g, root.walColor4.b, 0.2) : "transparent"
-                        Behavior on color { ColorAnimation { duration: 150 } }
-                        RowLayout {
-                            anchors.centerIn: parent
-                            spacing: 6
-                            Text {
-                                text: "★"
-                                color: root.activeTab === 2 ? root.walColor4 : root.walColor8
-                                font.pixelSize: 14
-                                font.family: "JetBrainsMono Nerd Font"
-                            }
-                            Text {
-                                text: "Fav" + (root.wallFavorites.length > 0 ? " " + root.wallFavorites.length : "")
-                                color: root.activeTab === 2 ? root.walColor4 : root.walColor8
-                                font.pixelSize: 13
-                                font.bold: root.activeTab === 2
-                                font.family: "JetBrainsMono Nerd Font"
-                            }
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.activeTab = 2
-                                root.wallSelectedIndex = 0
-                                if (!root.wallsLoaded) root.loadWallpapers()
-                                wallSearchInput.forceActiveFocus()
-                            }
-                        }
-                    }
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        radius: 8
-                        color: root.activeTab === 0 ? Qt.rgba(root.walColor5.r, root.walColor5.g, root.walColor5.b, 0.2) : "transparent"
-                        Behavior on color { ColorAnimation { duration: 150 } }
-                        RowLayout {
-                            anchors.centerIn: parent
-                            spacing: 6
-                            Text {
-                                text: "󰀻"
-                                color: root.activeTab === 0 ? root.walColor5 : root.walColor8
-                                font.pixelSize: 14
-                                font.family: "JetBrainsMono Nerd Font"
-                            }
-                            Text {
-                                text: "Apps"
-                                color: root.activeTab === 0 ? root.walColor5 : root.walColor8
-                                font.pixelSize: 13
-                                font.bold: root.activeTab === 0
-                                font.family: "JetBrainsMono Nerd Font"
-                            }
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.activeTab = 0
-                                searchInput.forceActiveFocus()
-                            }
-                        }
-                    }
                 }
             }
 
@@ -205,298 +139,81 @@ PanelWindow {
                 ColumnLayout {
                     anchors.fill: parent
                     spacing: 15
-                    opacity: root.activeTab === 0 ? 1 : 0
+                    opacity: root.activeTab === 1 ? 1 : 0
                     visible: opacity > 0.01
-                    enabled: root.activeTab === 0
+                    enabled: root.activeTab === 1
                     Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-                    transform: Translate { y: (root.activeTab === 0) ? 0 : 14; Behavior on y { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } } }
+                    transform: Translate { y: (root.activeTab === 1) ? 0 : 14; Behavior on y { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } } }
 
+                    // Разделы обоев: все / Steam / избранные
                     Rectangle {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 42
+                        Layout.preferredHeight: 36
                         color: Qt.rgba(0, 0, 0, 0.3)
                         radius: 12
-                        border.width: searchInput.activeFocus ? 1 : 0
-                        border.color: root.walColor5
                         RowLayout {
                             anchors.fill: parent
-                            anchors.leftMargin: 14
-                            anchors.rightMargin: 14
-                            spacing: 10
-                            Text {
-                                text: ""
-                                color: root.walColor8
-                                font.pixelSize: 14
-                                font.family: "JetBrainsMono Nerd Font"
-                            }
-                            TextInput {
-                                id: searchInput
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
-                                color: root.walForeground
-                                font.pixelSize: 14
-                                font.family: "JetBrainsMono Nerd Font"
-                                verticalAlignment: TextInput.AlignVCenter
-                                selectByMouse: true
-                                clip: true
-                                Text {
-                                    text: "Search apps..."
-                                    color: root.walColor8
-                                    visible: !parent.text
-                                    anchors.left: parent.left
-                                    anchors.verticalCenter: parent.verticalCenter
-                                    font: parent.font
-                                    opacity: 0.6
-                                }
-                                onTextChanged: {
-                                    root.searchTerm = text.toLowerCase()
-                                    root.selectedIndex = 0
-                                    appListView.contentY = 0
-                                }
-                                Keys.onPressed: function(event) {
-                                    if (event.key === Qt.Key_Down) {
-                                        root.selectedIndex = Math.min(root.selectedIndex + 1, root.filteredApps.length - 1)
-                                        appListView.positionViewAtIndex(root.selectedIndex, ListView.Contain)
-                                        event.accepted = true
-                                    } else if (event.key === Qt.Key_Up) {
-                                        root.selectedIndex = Math.max(root.selectedIndex - 1, 0)
-                                        appListView.positionViewAtIndex(root.selectedIndex, ListView.Contain)
-                                        event.accepted = true
-                                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                                        if (root.filteredApps.length > 0 && root.selectedIndex >= 0 && root.selectedIndex < root.filteredApps.length)
-                                            root.launchApp(root.filteredApps[root.selectedIndex])
-                                        event.accepted = true
-                                    } else if (event.key === Qt.Key_Escape) {
-                                        root.launcherVisible = false
-                                        searchInput.text = ""
-                                        event.accepted = true
-                                    } else if (event.key === Qt.Key_Tab) {
-                                        root.activeTab = 1
-                                        if (!root.wallsLoaded) root.loadWallpapers()
-                                        wallSearchInput.forceActiveFocus()
-                                        event.accepted = true
-                                    }
-                                }
-                            }
-                            Text {
-                                visible: searchInput.text.length > 0
-                                text: "󰅖"
-                                color: root.walColor8
-                                font.pixelSize: 12
-                                font.family: "JetBrainsMono Nerd Font"
-                                opacity: clearAppMouse.containsMouse ? 1.0 : 0.7
-                                Behavior on opacity { NumberAnimation { duration: 100 } }
-                                MouseArea {
-                                    id: clearAppMouse
-                                    anchors.fill: parent
-                                    anchors.margins: -4
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        searchInput.text = ""
-                                        searchInput.forceActiveFocus()
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        color: Qt.rgba(0, 0, 0, 0.3)
-                        radius: 15
-                        clip: true
-
-                        ListView {
-                            id: appListView
-                            anchors.fill: parent
-                            anchors.margins: 8
+                            anchors.margins: 4
                             spacing: 4
-                            boundsBehavior: Flickable.StopAtBounds
-                            currentIndex: root.selectedIndex
-                            highlightFollowsCurrentItem: true
-                            highlightMoveDuration: 100
-                            model: root.filteredApps
-
-                            property real targetContentY: 0
-                            property bool animatingScroll: false
-
-                            NumberAnimation {
-                                id: appScrollAnim
-                                target: appListView
-                                property: "contentY"
-                                duration: 300
-                                easing.type: Easing.OutCubic
-                                onFinished: appListView.animatingScroll = false
-                            }
-
-                            function smoothScrollTo(newY) {
-                                var maxY = Math.max(0, contentHeight - height)
-                                newY = Math.max(0, Math.min(newY, maxY))
-                                if (animatingScroll) {
-                                    appScrollAnim.stop()
-                                }
-                                animatingScroll = true
-                                appScrollAnim.from = contentY
-                                appScrollAnim.to = newY
-                                targetContentY = newY
-                                appScrollAnim.start()
-                            }
-
-                            function smoothScrollBy(delta) {
-                                var base = animatingScroll ? targetContentY : contentY
-                                smoothScrollTo(base + delta)
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                propagateComposedEvents: true
-                                onWheel: function(wheel) {
-                                    var step = -wheel.angleDelta.y / 120.0 * 60
-                                    appListView.smoothScrollBy(step)
-                                }
-                                onClicked: function(mouse) { mouse.accepted = false }
-                                onPressed: function(mouse) { mouse.accepted = false }
-                                onReleased: function(mouse) { mouse.accepted = false }
-                            }
-
-                            delegate: Rectangle {
-                                width: appListView.width
-                                height: 48
-                                radius: 12
-                                color: {
-                                    if (index === root.selectedIndex)
-                                        return Qt.rgba(root.walColor5.r, root.walColor5.g, root.walColor5.b, 0.2)
-                                    if (appItemMouse.containsMouse)
-                                        return Qt.rgba(1, 1, 1, 0.05)
-                                    return "transparent"
-                                }
-                                Behavior on color { ColorAnimation { duration: 120 } }
-                                Rectangle {
-                                    visible: index === root.selectedIndex
-                                    width: 3
-                                    height: 22
-                                    radius: 2
-                                    color: root.walColor5
-                                    anchors.left: parent.left
-                                    anchors.leftMargin: 4
-                                    anchors.verticalCenter: parent.verticalCenter
-                                }
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 14
-                                    anchors.rightMargin: 14
-                                    anchors.topMargin: 6
-                                    anchors.bottomMargin: 6
-                                    spacing: 12
-                                    Rectangle {
-                                        width: 32
-                                        height: 32
-                                        radius: 8
-                                        color: Qt.rgba(0, 0, 0, 0.2)
-                                        Image {
-                                            anchors.centerIn: parent
-                                            width: 22
-                                            height: 22
-                                            source: {
-                                                var icon = modelData.icon
-                                                if (!icon || icon === "") return "image://icon/application-x-executable"
-                                                if (icon.indexOf("/") === 0) return "file://" + icon
-                                                return "image://icon/" + icon
-                                            }
-                                            fillMode: Image.PreserveAspectFit
-                                            asynchronous: true
-                                            cache: true
-                                        }
-                                    }
-                                    ColumnLayout {
-                                        Layout.fillWidth: true
-                                        spacing: 1
+                            Repeater {
+                                model: [
+                                    { cat: 0, icon: "󰸉", label: "Все",       count: root.wallpaperList.length, tint: root.walColor13 },
+                                    { cat: 1, icon: "󰓓", label: "Steam",     count: root.steamWallCount,      tint: root.walColor2 },
+                                    { cat: 2, icon: "★", label: "Избранное", count: root.wallFavorites.length, tint: root.walColor4 }
+                                ]
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    property bool active: root.wallCategory === modelData.cat
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    radius: 8
+                                    color: active ? Qt.rgba(modelData.tint.r, modelData.tint.g, modelData.tint.b, 0.22)
+                                                  : (catMouse.containsMouse ? Qt.rgba(1, 1, 1, 0.06) : "transparent")
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                    Row {
+                                        anchors.centerIn: parent
+                                        spacing: 6
                                         Text {
-                                            Layout.fillWidth: true
-                                            text: modelData.name
-                                            color: index === root.selectedIndex ? root.walColor5 : root.walForeground
-                                            font.pixelSize: 13
+                                            text: modelData.icon
+                                            color: active ? modelData.tint : root.walColor8
+                                            font.pixelSize: 12
                                             font.family: "JetBrainsMono Nerd Font"
-                                            font.bold: index === root.selectedIndex
-                                            elide: Text.ElideRight
-                                            Behavior on color { ColorAnimation { duration: 120 } }
+                                            anchors.verticalCenter: parent.verticalCenter
                                         }
                                         Text {
-                                            Layout.fillWidth: true
-                                            text: modelData.exec
-                                            color: root.walColor8
-                                            font.pixelSize: 9
+                                            text: modelData.label
+                                            color: active ? root.walForeground : root.walColor8
+                                            font.pixelSize: 12
+                                            font.bold: active
                                             font.family: "JetBrainsMono Nerd Font"
-                                            elide: Text.ElideRight
-                                            opacity: 0.7
+                                            anchors.verticalCenter: parent.verticalCenter
+                                        }
+                                        Text {
+                                            visible: modelData.count > 0
+                                            text: modelData.count
+                                            color: active ? modelData.tint : root.walColor8
+                                            opacity: 0.8
+                                            font.pixelSize: 10
+                                            font.family: "JetBrainsMono Nerd Font"
+                                            anchors.verticalCenter: parent.verticalCenter
                                         }
                                     }
-                                    Text {
-                                        visible: index === root.selectedIndex
-                                        text: "↵"
-                                        color: root.walColor5
-                                        font.pixelSize: 14
-                                        font.family: "JetBrainsMono Nerd Font"
-                                        font.bold: true
-                                    }
-                                }
-                                MouseArea {
-                                    id: appItemMouse
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.launchApp(modelData)
-                                    onContainsMouseChanged: {
-                                        if (containsMouse) root.selectedIndex = index
+                                    MouseArea {
+                                        id: catMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            root.wallCategory = modelData.cat
+                                            root.wallSelectedIndex = 0
+                                            wallGridView.contentY = 0
+                                            wallSearchInput.forceActiveFocus()
+                                        }
                                     }
                                 }
                             }
-                            ScrollBar.vertical: ScrollBar {
-                                active: true
-                                width: 4
-                                policy: ScrollBar.AsNeeded
-                            }
-                        }
-                        Text {
-                            anchors.centerIn: parent
-                            visible: root.filteredApps.length === 0
-                            text: "No apps found"
-                            color: root.walColor8
-                            font.pixelSize: 14
-                            font.family: "JetBrainsMono Nerd Font"
                         }
                     }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 28
-                        color: Qt.rgba(0, 0, 0, 0.3)
-                        radius: 10
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 12
-                            anchors.rightMargin: 12
-                            Text { text: "↑↓ nav"; color: root.walColor8; font.pixelSize: 10; font.family: "JetBrainsMono Nerd Font"; opacity: 0.7 }
-                            Item { Layout.fillWidth: true }
-                            Text { text: "↵ launch"; color: root.walColor8; font.pixelSize: 10; font.family: "JetBrainsMono Nerd Font"; opacity: 0.7 }
-                            Item { Layout.fillWidth: true }
-                            Text { text: "tab walls"; color: root.walColor8; font.pixelSize: 10; font.family: "JetBrainsMono Nerd Font"; opacity: 0.7 }
-                            Item { Layout.fillWidth: true }
-                            Text { text: "esc close"; color: root.walColor8; font.pixelSize: 10; font.family: "JetBrainsMono Nerd Font"; opacity: 0.7 }
-                        }
-                    }
-                }
-
-                ColumnLayout {
-                    anchors.fill: parent
-                    spacing: 15
-                    opacity: root.activeTab === 1 || root.activeTab === 2 ? 1 : 0
-                    visible: opacity > 0.01
-                    enabled: root.activeTab === 1 || root.activeTab === 2
-                    Behavior on opacity { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
-                    transform: Translate { y: (root.activeTab === 1 || root.activeTab === 2) ? 0 : 14; Behavior on y { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } } }
 
                     // Мониторы: одни обои на все или разные на каждом
                     Rectangle {
@@ -823,12 +540,14 @@ PanelWindow {
                                         wallSearchInput.text = ""
                                         event.accepted = true
                                     } else if (event.key === Qt.Key_Tab) {
+                                        // Tab — следующий раздел, после избранного — пульт
                                         root.wallSelectedIndex = 0
-                                        if (root.activeTab === 1) {
-                                            root.activeTab = 2
+                                        wallGridView.contentY = 0
+                                        if (root.wallCategory < 2) {
+                                            root.wallCategory++
                                         } else {
-                                            root.activeTab = 0
-                                            searchInput.forceActiveFocus()
+                                            root.wallCategory = 0
+                                            root.activeTab = 3
                                         }
                                         event.accepted = true
                                     } else if (event.key === Qt.Key_S && (event.modifiers & Qt.ControlModifier)) {
@@ -1125,8 +844,10 @@ PanelWindow {
                         Text {
                             anchors.centerIn: parent
                             visible: root.wallsLoaded && root.filteredWallpapers.length === 0
-                            text: root.activeTab === 2 && root.wallFavorites.length === 0
+                            text: root.wallCategory === 2 && root.wallFavorites.length === 0
                                   ? "Нет избранных — нажми ☆ на превью"
+                                  : root.wallCategory === 1 && root.steamWallCount === 0
+                                  ? "Нет обоев из Мастерской Wallpaper Engine"
                                   : "No wallpapers found"
                             color: root.walColor8
                             font.pixelSize: 14
@@ -1160,7 +881,7 @@ PanelWindow {
                             Item { Layout.fillWidth: true }
                             Text { text: "↵ apply"; color: root.walColor8; font.pixelSize: 10; font.family: "JetBrainsMono Nerd Font"; opacity: 0.7 }
                             Item { Layout.fillWidth: true }
-                            Text { text: "tab apps"; color: root.walColor8; font.pixelSize: 10; font.family: "JetBrainsMono Nerd Font"; opacity: 0.7 }
+                            Text { text: "tab раздел"; color: root.walColor8; font.pixelSize: 10; font.family: "JetBrainsMono Nerd Font"; opacity: 0.7 }
                             Item { Layout.fillWidth: true }
                             Text { text: "esc close"; color: root.walColor8; font.pixelSize: 10; font.family: "JetBrainsMono Nerd Font"; opacity: 0.7 }
                         }
@@ -1174,19 +895,14 @@ PanelWindow {
         target: root
         function onLauncherVisibleChanged() {
             if (root.launcherVisible) {
-                searchInput.text = ""
                 wallSearchInput.text = ""
                 root.selectedIndex = 0
                 root.wallSelectedIndex = 0
-                appListView.contentY = 0
                 wallGridView.contentY = 0
-                loadUsageProc.running = true
                 currentWallProc.running = true
                 focusDelayTimer.start()
             } else {
-                searchInput.text = ""
                 wallSearchInput.text = ""
-                searchInput.focus = false
                 wallSearchInput.focus = false
             }
         }
@@ -1211,8 +927,8 @@ PanelWindow {
         interval: 100
         repeat: false
         onTriggered: {
-            if (root.activeTab === 0)
-                searchInput.forceActiveFocus()
+            if (root.activeTab === 3)
+                controlCenter.forceActiveFocus()
             else {
                 if (!root.wallsLoaded) root.loadWallpapers()
                 wallSearchInput.forceActiveFocus()

@@ -56,7 +56,8 @@ Item {
             root.launcherVisible = false
             event.accepted = true
         } else if (event.key === Qt.Key_Tab) {
-            root.activeTab = 0
+            root.activeTab = 1
+            if (!root.wallsLoaded) root.loadWallpapers()
             event.accepted = true
         }
     }

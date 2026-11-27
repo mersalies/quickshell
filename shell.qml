@@ -68,7 +68,7 @@ ShellRoot {
         return sorted
     }
     property int selectedIndex: 0
-    property int activeTab: 0
+    property int activeTab: 3
     property string wallSearchTerm: ""
     property var wallpaperList: []
     // Избранные обои: массив путей, хранится в state/wall-favorites.json
@@ -84,13 +84,21 @@ ShellRoot {
                                      JSON.stringify(arr), statePath + "/wall-favorites.json"]
         saveFavoritesProc.running = true
     }
+    // Раздел обоев: 0 — все, 1 — Steam (Мастерская Wallpaper Engine), 2 — избранные
+    property int wallCategory: 0
+    property int steamWallCount: {
+        var n = 0
+        for (var i = 0; i < wallpaperList.length; i++) if (isSteamWall(wallpaperList[i].path)) n++
+        return n
+    }
     property var filteredWallpapers: {
         var favs = wallFavorites
-        var onlyFav = activeTab === 2
+        var cat = wallCategory
         var result = []
         for (var i = 0; i < wallpaperList.length; i++) {
             var w = wallpaperList[i]
-            if (onlyFav && favs.indexOf(w.path) === -1) continue
+            if (cat === 1 && !isSteamWall(w.path)) continue
+            if (cat === 2 && favs.indexOf(w.path) === -1) continue
             if (wallSearchTerm !== "" && !w.name.toLowerCase().includes(wallSearchTerm)) continue
             result.push(w)
         }
@@ -145,7 +153,8 @@ ShellRoot {
     property string wallScript: configPath + "/scripts/wallpaper.sh"
     function isVideo(p) { return /\.(mp4|webm|mkv|mov|m4v)$/i.test(p || "") }
     // Scene-обои Wallpaper Engine: папка в Мастерской Steam (appid 431960)
-    function isScene(p) { return (p || "").indexOf("/workshop/content/431960/") !== -1 }
+    function isSteamWall(p) { return (p || "").indexOf("/workshop/content/431960/") !== -1 }
+    function isScene(p) { return isSteamWall(p) && !isVideo(p) }
     property string weScenesScript: configPath + "/scripts/we-scenes.sh"
 
     property bool wifiEnabled: true
@@ -667,8 +676,8 @@ ShellRoot {
             "    fi; " +
             "  fi; " +
             "done; " +
-            "bash '" + root.weScenesScript + "' --dirs 2>/dev/null | while IFS= read -r d; do " +
-            "  hash=$(echo -n \"$d\" | md5sum | cut -d' ' -f1); thumb=\"$THUMB_DIR/${hash}.jpg\"; " +
+            "bash '" + root.weScenesScript + "' --thumbs 2>/dev/null | while IFS=$'\\t' read -r p d; do " +
+            "  hash=$(echo -n \"$p\" | md5sum | cut -d' ' -f1); thumb=\"$THUMB_DIR/${hash}.jpg\"; " +
             "  prev=$(ls \"$d\"/preview.* 2>/dev/null | head -1); [ -n \"$prev\" ] || continue; " +
             "  if [ ! -f \"$thumb\" ] || [ \"$prev\" -nt \"$thumb\" ]; then " +
             "    convert \"${prev}[0]\" -thumbnail 180x120^ -gravity center -extent 180x120 -quality 85 \"$thumb\" 2>/dev/null; " +
@@ -1192,7 +1201,7 @@ ShellRoot {
     IpcHandler {
         target: "launcher"
         function toggle() {
-            root.activeTab = 0
+            root.activeTab = 3
             root.toggleLauncher()
         }
     }
