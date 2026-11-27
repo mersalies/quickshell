@@ -34,8 +34,13 @@ ensure_power() {
 try_connect() {
     local out
     out=$(timeout 20 bluetoothctl connect "$mac" 2>&1)
-    if is Connected; then return 0; fi
     last_err=$(grep -oE "(org\.bluez\.Error\.[A-Za-z]+[^\r\n]*|Failed to connect[^\r\n]*)" <<<"$out" | tail -1)
+    # «Connected: yes» мелькает и при неверном ключе — успех только если соединение держится
+    if grep -q "Connection successful" <<<"$out" || [[ -z $last_err ]]; then
+        sleep 2
+        is Connected && return 0
+        [[ -z $last_err ]] && last_err="соединение сразу разорвано"
+    fi
     return 1
 }
 

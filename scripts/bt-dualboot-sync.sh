@@ -9,16 +9,18 @@
 #   sudo bt-dualboot-sync.sh            — показать, что будет изменено, и применить
 #   sudo bt-dualboot-sync.sh --dry-run  — только показать
 #   sudo bt-dualboot-sync.sh --part /dev/nvme1n1p3   — указать раздел Windows вручную
+#   sudo bt-dualboot-sync.sh --force    — читать реестр, даже если Windows не дописала его на диск
 #
 # Нужно: пакет hivex (hivexregedit), ntfs-3g. Раздел Windows монтируется только на чтение.
 # Поддерживаются классические устройства (BR/EDR: наушники, колонки) — ключ LinkKey.
 set -euo pipefail
 
-DRY=0 PART=""
+DRY=0 PART="" FORCE=0
 while [[ $# -gt 0 ]]; do
     case $1 in
         --dry-run|-n) DRY=1 ;;
         --part) PART=$2; shift ;;
+        --force) FORCE=1 ;;
         -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
         *) echo "неизвестный аргумент: $1"; exit 1 ;;
     esac
@@ -51,10 +53,30 @@ else
     PART=$found
 fi
 echo "==> Windows: $PART"
+HIVE=$MNT/Windows/System32/config/SYSTEM
+
+# Windows с «быстрым запуском» не переносит свежие изменения реестра в основной файл
+# SYSTEM, а держит их в журнале (SYSTEM.LOG1/LOG2). Тогда в файле лежит СТАРЫЙ ключ.
+# Признак — разные номера последовательности в заголовке куста.
+read -r seq1 seq2 < <(od -An -tu4 -j4 -N8 "$HIVE")
+if [[ $seq1 != "$seq2" ]]; then
+    echo "!! Реестр Windows «грязный»: свежие изменения не записаны в SYSTEM (seq $seq1 ≠ $seq2)."
+    echo "   Ключ из него скорее всего устаревший. Загрузитесь в Windows и выключите её полностью:"
+    echo "   Shift + «Завершение работы» (или отключите «Быстрый запуск» в электропитании)."
+    if [[ $FORCE == 0 ]]; then
+        echo "   Ничего не меняю. Принудительно: --force"
+        exit 2
+    fi
+fi
+
+# Активный набор управления (обычно ControlSet001, но не всегда)
+CS=$(hivexget "$HIVE" '\Select' Current 2>/dev/null | tr -dc '0-9')
+CS=$(printf 'ControlSet%03d' "$((10#${CS:-1}))")
+echo "==> $CS"
 
 # Экспорт ветки ключей: [...\Keys\<адаптер>] "<устройство>"=hex:aa,bb,...
-REG=$(hivexregedit --export --prefix 'HKLM\SYSTEM' "$MNT/Windows/System32/config/SYSTEM" \
-      '\ControlSet001\Services\BTHPORT\Parameters\Keys' 2>/dev/null | tr -d '\r')
+REG=$(hivexregedit --export --prefix 'HKLM\SYSTEM' "$HIVE" \
+      "\\$CS\\Services\\BTHPORT\\Parameters\\Keys" 2>/dev/null | tr -d '\r')
 [[ -n $REG ]] || { echo "в реестре нет ключей Bluetooth"; exit 1; }
 
 declare -A WINKEY
